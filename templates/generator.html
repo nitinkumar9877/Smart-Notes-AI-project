@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}Generate Notes — AI Smart Notes{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    {% include 'partials/sidebar.html' %}
+
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Generate Notes</h1>
+                <p class="page-subtitle">Enter any topic to generate AI-powered study notes</p>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()"><span class="theme-icon">🌙</span></button>
+        </div>
+
+        <!-- Generator Input -->
+        <div class="generator-card">
+            <div class="generator-form">
+                <div class="topic-input-wrapper">
+                    <span class="topic-prefix">Topic:</span>
+                    <input 
+                        type="text" 
+                        id="topic-input" 
+                        class="topic-input"
+                        placeholder="e.g. Quantum Computing, Neural Networks, Photosynthesis..."
+                        maxlength="200"
+                        autofocus
+                    >
+                    <span class="char-count" id="char-count">0/200</span>
+                </div>
+                <div class="generator-actions">
+                    <button class="btn btn-primary btn-generate" id="generate-btn" onclick="generateNotes()">
+                        <span class="btn-icon">⚡</span>
+                        <span id="gen-btn-text">Generate Notes</span>
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="clearAll()">Clear</button>
+                </div>
+            </div>
+            <div class="topic-suggestions">
+                <span class="suggestions-label">Try:</span>
+                <button class="suggestion-chip" onclick="setTopic('Machine Learning')">Machine Learning</button>
+                <button class="suggestion-chip" onclick="setTopic('Data Structures')">Data Structures</button>
+                <button class="suggestion-chip" onclick="setTopic('Operating Systems')">Operating Systems</button>
+                <button class="suggestion-chip" onclick="setTopic('Computer Networks')">Computer Networks</button>
+                <button class="suggestion-chip" onclick="setTopic('DBMS')">DBMS</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-card hidden">
+            <div class="ai-loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring ring-2"></div>
+                <div class="loader-ring ring-3"></div>
+            </div>
+            <h3>AI is thinking...</h3>
+            <p id="loading-message">Generating comprehensive notes for your topic</p>
+            <div class="loading-steps">
+                <div class="load-step active" id="step-1">📚 Analyzing topic</div>
+                <div class="load-step" id="step-2">🔬 Generating detailed notes</div>
+                <div class="load-step" id="step-3">📋 Creating summary</div>
+                <div class="load-step" id="step-4">⚡ Extracting key points</div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-card hidden">
+            <div class="error-icon">⚠️</div>
+            <h3>Generation Failed</h3>
+            <p id="error-message">Something went wrong. Please try again.</p>
+            <button class="btn btn-primary btn-sm" onclick="generateNotes()">Retry</button>
+        </div>
+
+        <!-- Results -->
+        <div id="results-section" class="hidden">
+            <!-- Topic Header -->
+            <div class="results-header">
+                <div class="results-topic-info">
+                    <h2 id="result-topic"></h2>
+                    <span id="result-date" class="result-date"></span>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="toggleFavorite()" id="fav-btn" title="Add to favorites">⭐</button>
+                    <button class="btn btn-ghost btn-sm" onclick="downloadPDF()" id="pdf-btn">📄 PDF</button>
+                    <button class="btn btn-ghost btn-sm" onclick="copyNotes()">📋 Copy</button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-bar">
+                <button class="tab active" onclick="switchTab('notes', this)">📚 Full Notes</button>
+                <button class="tab" onclick="switchTab('summary', this)">📋 Summary</button>
+                <button class="tab" onclick="switchTab('keypoints', this)">⚡ Key Points</button>
+            </div>
+
+            <!-- Notes Content -->
+            <div id="tab-notes" class="tab-content notes-container active">
+                <div id="notes-body" class="notes-body markdown-content"></div>
+            </div>
+
+            <!-- Summary Content -->
+            <div id="tab-summary" class="tab-content hidden">
+                <div class="summary-card">
+                    <div class="summary-icon">📋</div>
+                    <div id="summary-body" class="summary-body"></div>
+                </div>
+            </div>
+
+            <!-- Key Points Content -->
+            <div id="tab-keypoints" class="tab-content hidden">
+                <div class="keypoints-grid" id="keypoints-grid"></div>
+            </div>
+        </div>
+
+        <!-- AI Chatbot -->
+        <div class="chatbot-fab" id="chatbot-fab" onclick="toggleChatbot()">
+            <span class="fab-icon">💬</span>
+            <span class="fab-label">Study Assistant</span>
+        </div>
+
+        <div class="chatbot-panel hidden" id="chatbot-panel">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span>🤖</span> AI Study Assistant
+                </div>
+                <button class="chat-close" onclick="toggleChatbot()">✕</button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-msg bot">
+                    <div class="msg-bubble">Hi! I'm your AI study assistant. Ask me anything about your topic or any study doubts! 🎓</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ask a study question..." 
+                       onkeydown="if(event.key==='Enter') sendChat()">
+                <button class="chat-send-btn" onclick="sendChat()">➤</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+let currentNoteId = null;
+let currentTopic = '';
+let isFavorite = false;
+
+const topicInput = document.getElementById('topic-input');
+topicInput.addEventListener('input', () => {
+    document.getElementById('char-count').textContent = `${topicInput.value.length}/200`;
+});
+
+topicInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') generateNotes();
+});
+
+function setTopic(t) {
+    topicInput.value = t;
+    document.getElementById('char-count').textContent = `${t.length}/200`;
+    topicInput.focus();
+}
+
+function clearAll() {
+    topicInput.value = '';
+    document.getElementById('char-count').textContent = '0/200';
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('error-state').classList.add('hidden');
+    currentNoteId = null;
+}
+
+async function generateNotes() {
+    const topic = topicInput.value.trim();
+    if (!topic) { topicInput.focus(); topicInput.classList.add('shake'); setTimeout(() => topicInput.classList.remove('shake'), 500); return; }
+
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('error-state').classList.add('hidden');
+    document.getElementById('loading-state').classList.remove('hidden');
+    document.getElementById('gen-btn-text').textContent = 'Generating...';
+    document.getElementById('generate-btn').disabled = true;
+
+    // Animate loading steps
+    const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+    let si = 0;
+    const stepInterval = setInterval(() => {
+        if (si > 0) document.getElementById(steps[si-1]).classList.remove('active');
+        if (si < steps.length) { document.getElementById(steps[si]).classList.add('active'); si++; }
+        else clearInterval(stepInterval);
+    }, 1800);
+
+    try {
+        const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic })
+        });
+
+        clearInterval(stepInterval);
+        const data = await res.json();
+
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+        currentNoteId = data.id;
+        currentTopic = data.topic;
+        isFavorite = false;
+
+        // Populate results
+        document.getElementById('result-topic').textContent = data.topic;
+        document.getElementById('result-date').textContent = data.created_at;
+        document.getElementById('notes-body').innerHTML = parseMarkdown(data.notes);
+        document.getElementById('summary-body').textContent = data.summary;
+
+        // Key points
+        const kpGrid = document.getElementById('keypoints-grid');
+        kpGrid.innerHTML = data.key_points.map((p, i) => `
+            <div class="kp-card">
+                <div class="kp-number">${String(i+1).padStart(2,'0')}</div>
+                <div class="kp-text">${escapeHtml(p)}</div>
+            </div>`).join('');
+
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('results-section').classList.remove('hidden');
+        document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (e) {
+        clearInterval(stepInterval);
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('error-state').classList.remove('hidden');
+        document.getElementById('error-message').textContent = e.message;
+    } finally {
+        document.getElementById('gen-btn-text').textContent = 'Generate Notes';
+        document.getElementById('generate-btn').disabled = false;
+    }
+}
+
+function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => { t.classList.remove('active'); t.classList.add('hidden'); });
+    el.classList.add('active');
+    const content = document.getElementById(`tab-${tab}`);
+    content.classList.remove('hidden');
+    content.classList.add('active');
+}
+
+async function toggleFavorite() {
+    if (!currentNoteId) return;
+    const res = await fetch(`/api/notes/${currentNoteId}/favorite`, { method: 'PUT' });
+    const data = await res.json();
+    isFavorite = data.is_favorite;
+    document.getElementById('fav-btn').textContent = isFavorite ? '⭐' : '☆';
+    document.getElementById('fav-btn').style.color = isFavorite ? 'gold' : '';
+}
+
+async function downloadPDF() {
+    if (!currentNoteId) return;
+    const btn = document.getElementById('pdf-btn');
+    btn.textContent = '⏳ Preparing...';
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/api/notes/${currentNoteId}/pdf`);
+        if (!res.ok) throw new Error('PDF generation failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `notes_${currentTopic.replace(/ /g,'_')}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (e) { alert('PDF download failed: ' + e.message); }
+    finally { btn.textContent = '📄 PDF'; btn.disabled = false; }
+}
+
+function copyNotes() {
+    const content = document.getElementById('notes-body').innerText;
+    navigator.clipboard.writeText(content).then(() => {
+        const btn = event.target;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    });
+}
+
+// Chatbot
+let chatContext = '';
+function toggleChatbot() {
+    document.getElementById('chatbot-panel').classList.toggle('hidden');
+}
+
+async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    appendChatMsg(msg, 'user');
+    input.value = '';
+    appendChatMsg('Thinking...', 'bot', true);
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, context: currentTopic })
+        });
+        const data = await res.json();
+        removePendingMsg();
+        appendChatMsg(data.response || data.error, 'bot');
+    } catch (e) {
+        removePendingMsg();
+        appendChatMsg('Sorry, I had trouble connecting. Please try again.', 'bot');
+    }
+}
+
+function appendChatMsg(text, type, pending=false) {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `chat-msg ${type}${pending ? ' pending' : ''}`;
+    div.innerHTML = `<div class="msg-bubble">${escapeHtml(text)}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removePendingMsg() {
+    const pending = document.querySelector('.chat-msg.pending');
+    if (pending) pending.remove();
+}
+
+// Simple markdown parser
+function parseMarkdown(text) {
+    return text
+        .replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>')
+        .replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^- (.+)$/gm, '<li class="md-li">$1</li>')
+        .replace(/(<li.*<\/li>\n?)+/g, '<ul class="md-ul">$&</ul>')
+        .replace(/\n\n/g, '</p><p class="md-p">')
+        .replace(/^(?!<[hul])/gm, '')
+        .replace(/(.+)/g, (m) => m.startsWith('<') ? m : `<p class="md-p">${m}</p>`);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🧠</span>
+        <span class="brand-text">SmartNotes <span class="brand-ai">AI</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/dashboard" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+        </a>
+        <a href="/generator" class="nav-item {% if request.endpoint == 'generator' %}active{% endif %}">
+            <span class="nav-icon">⚡</span>
+            <span>Generate Notes</span>
+        </a>
+        <a href="/notes" class="nav-item {% if request.endpoint == 'my_notes' %}active{% endif %}">
+            <span class="nav-icon">📚</span>
+            <span>My Notes</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <button class="btn-logout" onclick="handleLogout()">
+            <span>🚪</span> Sign Out
+        </button>
+    </div>
+</aside>
+
+<div class="mobile-nav-toggle" onclick="toggleSidebar()">
+    <span>☰</span>
+</div>

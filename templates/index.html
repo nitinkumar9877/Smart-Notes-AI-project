@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}AI Smart Notes — Powered by Gemini AI{% endblock %}
+
+{% block body %}
+<div class="landing-page">
+    <!-- Navbar -->
+    <nav class="landing-nav">
+        <div class="nav-brand">
+            <span class="brand-icon">🧠</span>
+            <span class="brand-text">SmartNotes <span class="brand-ai">AI</span></span>
+        </div>
+        <div class="nav-actions">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <a href="/login" class="btn btn-ghost">Sign In</a>
+            <a href="/register" class="btn btn-primary">Get Started</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+            <div class="grid-overlay"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                Powered by Google Gemini AI
+            </div>
+            <h1 class="hero-title">
+                Study Smarter.<br>
+                <span class="gradient-text">Learn Faster.</span>
+            </h1>
+            <p class="hero-subtitle">
+                Generate comprehensive study notes, summaries, and key points 
+                for any topic instantly using the power of Generative AI.
+            </p>
+            <div class="hero-actions">
+                <a href="/register" class="btn btn-primary btn-lg">
+                    Start Generating Free
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </a>
+                <a href="#features" class="btn btn-ghost btn-lg">See Features</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat"><span class="stat-number">∞</span><span class="stat-label">Topics</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-number">5s</span><span class="stat-label">Generation Time</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-number">PDF</span><span class="stat-label">Export Ready</span></div>
+            </div>
+        </div>
+        <div class="hero-demo">
+            <div class="demo-card">
+                <div class="demo-header">
+                    <span class="demo-dot red"></span>
+                    <span class="demo-dot yellow"></span>
+                    <span class="demo-dot green"></span>
+                    <span class="demo-title">AI Notes Generator</span>
+                </div>
+                <div class="demo-input-area">
+                    <span class="demo-label">Enter Topic</span>
+                    <div class="demo-input typing-demo">Machine Learning Algorithms</div>
+                </div>
+                <div class="demo-output">
+                    <div class="demo-section">
+                        <span class="demo-icon">📚</span>
+                        <div class="demo-lines">
+                            <div class="demo-line w-full"></div>
+                            <div class="demo-line w-4/5"></div>
+                            <div class="demo-line w-3/4"></div>
+                        </div>
+                    </div>
+                    <div class="demo-section">
+                        <span class="demo-icon">🎯</span>
+                        <div class="demo-lines">
+                            <div class="demo-line w-full"></div>
+                            <div class="demo-line w-2/3"></div>
+                        </div>
+                    </div>
+                    <div class="demo-tags">
+                        <span class="demo-tag">Supervised</span>
+                        <span class="demo-tag">Unsupervised</span>
+                        <span class="demo-tag">Neural Nets</span>
+                        <span class="demo-tag">SVM</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Features</span>
+                <h2>Everything you need to study better</h2>
+                <p>A complete AI-powered study companion for modern learners</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card feature-card--primary">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant AI Notes</h3>
+                    <p>Generate detailed, structured study notes on any topic in seconds using Google Gemini AI.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Smart Summaries</h3>
+                    <p>Get concise executive summaries highlighting the most important concepts.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Key Points</h3>
+                    <p>Extract 6 critical revision points for quick exam preparation.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3>PDF Export</h3>
+                    <p>Download your notes as beautifully formatted PDF files for offline study.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>AI Study Chatbot</h3>
+                    <p>Ask your study doubts to an intelligent AI assistant, available 24/7.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Search & Organize</h3>
+                    <p>Search through all your saved notes and organize them with favorites.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SDG Section -->
+    <section class="sdg-section">
+        <div class="container">
+            <div class="sdg-card">
+                <div class="sdg-badge">SDG 4</div>
+                <div class="sdg-content">
+                    <h3>Quality Education for All</h3>
+                    <p>
+                        SmartNotes AI aligns with <strong>United Nations SDG 4 – Quality Education</strong> 
+                        by making high-quality educational content accessible to every student, regardless 
+                        of geographic location or economic background. AI-powered personalized learning 
+                        democratizes access to comprehensive study materials.
+                    </p>
+                </div>
+                <div class="sdg-icon">🌍</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to transform how you study?</h2>
+            <p>Join thousands of students using AI to learn smarter</p>
+            <a href="/register" class="btn btn-primary btn-lg">Create Free Account</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="container">
+            <div class="footer-brand">
+                <span class="brand-icon">🧠</span>
+                <span>SmartNotes AI</span>
+            </div>
+            <p class="footer-text">
+                B.Tech Final Year Project · Computer Science · SDG 4 – Quality Education
+            </p>
+            <p class="footer-tech">Built with Flask · Google Gemini AI · SQLite</p>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // Animate stats on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) e.target.classList.add('visible');
+        });
+    });
+    document.querySelectorAll('.feature-card').forEach(c => observer.observe(c));
+</script>
+{% endblock %}

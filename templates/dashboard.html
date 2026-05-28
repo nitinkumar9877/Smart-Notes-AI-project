@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AI Smart Notes{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    {% include 'partials/sidebar.html' %}
+
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">Welcome back, <strong>{{ user.username }}</strong> 👋</p>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card stat-card--blue loading-pulse">
+                <div class="stat-icon">📝</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="total-notes">—</div>
+                    <div class="stat-label">Total Notes</div>
+                </div>
+            </div>
+            <div class="stat-card stat-card--yellow loading-pulse">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="favorites">—</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+            </div>
+            <div class="stat-card stat-card--green loading-pulse">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="today-notes">—</div>
+                    <div class="stat-label">Today</div>
+                </div>
+            </div>
+            <div class="stat-card stat-card--purple loading-pulse">
+                <div class="stat-icon">🤖</div>
+                <div class="stat-info">
+                    <div class="stat-number">Gemini</div>
+                    <div class="stat-label">AI Model</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Action -->
+        <div class="quick-action-card">
+            <div class="qa-content">
+                <div class="qa-icon">⚡</div>
+                <div>
+                    <h3>Generate New Notes</h3>
+                    <p>Enter any topic and get comprehensive AI-generated study notes instantly</p>
+                </div>
+            </div>
+            <a href="/generator" class="btn btn-primary">Generate Now →</a>
+        </div>
+
+        <!-- Recent Notes -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2>Recent Notes</h2>
+                <a href="/notes" class="btn btn-ghost btn-sm">View all</a>
+            </div>
+            <div id="recent-notes-list">
+                <div class="loading-state">Loading recent notes...</div>
+            </div>
+        </div>
+
+        <!-- SDG Banner -->
+        <div class="sdg-banner">
+            <div class="sdg-banner-content">
+                <span class="sdg-pill">🌍 SDG 4</span>
+                <p>This project supports <strong>Quality Education</strong> by making AI-powered learning accessible to all students.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard-stats');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        document.getElementById('total-notes').textContent = data.total_notes;
+        document.getElementById('favorites').textContent = data.favorites;
+        document.getElementById('today-notes').textContent = data.this_week;
+
+        document.querySelectorAll('.loading-pulse').forEach(c => c.classList.remove('loading-pulse'));
+
+        const container = document.getElementById('recent-notes-list');
+        if (data.recent_notes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <h3>No notes yet</h3>
+                    <p>Generate your first AI-powered notes</p>
+                    <a href="/generator" class="btn btn-primary btn-sm">Generate Notes</a>
+                </div>`;
+        } else {
+            container.innerHTML = data.recent_notes.map(n => `
+                <div class="note-list-item" onclick="window.location.href='/notes'">
+                    <div class="nli-icon">📄</div>
+                    <div class="nli-info">
+                        <div class="nli-topic">${escapeHtml(n.topic)}</div>
+                        <div class="nli-date">${n.created_at}</div>
+                    </div>
+                    <div class="nli-arrow">→</div>
+                </div>`).join('');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+loadDashboard();
+</script>
+{% endblock %}

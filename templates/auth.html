@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'login' %}Sign In{% else %}Create Account{% endif %} — AI Smart Notes{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+    <div class="auth-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-brand">
+            <a href="/" class="brand-link">
+                <span class="brand-icon">🧠</span>
+                <span class="brand-text">SmartNotes <span class="brand-ai">AI</span></span>
+            </a>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>{% if mode == 'login' %}Welcome back{% else %}Create account{% endif %}</h1>
+                <p>{% if mode == 'login' %}Sign in to access your notes{% else %}Start generating AI-powered notes{% endif %}</p>
+            </div>
+
+            <div id="auth-error" class="auth-error hidden"></div>
+            <div id="auth-success" class="auth-success hidden"></div>
+
+            {% if mode == 'register' %}
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" name="username" placeholder="Your name" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-with-toggle">
+                        <input type="password" id="password" name="password" placeholder="Min. 6 characters" required autocomplete="new-password">
+                        <button type="button" class="toggle-pass" onclick="togglePassword('password')">👁</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loader hidden">Creating...</span>
+                </button>
+            </form>
+            <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
+
+            {% else %}
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-with-toggle">
+                        <input type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password">
+                        <button type="button" class="toggle-pass" onclick="togglePassword('password')">👁</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loader hidden">Signing in...</span>
+                </button>
+            </form>
+            <p class="auth-switch">Don't have an account? <a href="/register">Create one free</a></p>
+            {% endif %}
+        </div>
+
+        <div class="auth-footer">
+            <button class="theme-toggle-sm" onclick="toggleTheme()">
+                <span class="theme-icon">🌙</span> Toggle theme
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const MODE = '{{ mode }}';
+
+document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoader = btn.querySelector('.btn-loader');
+    const errorDiv = document.getElementById('auth-error');
+    const successDiv = document.getElementById('auth-success');
+
+    btnText.classList.add('hidden');
+    btnLoader.classList.remove('hidden');
+    btn.disabled = true;
+    errorDiv.classList.add('hidden');
+
+    const data = MODE === 'register' ? {
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+    } : {
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+    };
+
+    try {
+        const endpoint = MODE === 'register' ? '/api/register' : '/api/login';
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            successDiv.textContent = result.message || 'Success!';
+            successDiv.classList.remove('hidden');
+            setTimeout(() => window.location.href = '/dashboard', 800);
+        } else {
+            errorDiv.textContent = result.error || 'Something went wrong';
+            errorDiv.classList.remove('hidden');
+            btnText.classList.remove('hidden');
+            btnLoader.classList.add('hidden');
+            btn.disabled = false;
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Connection error. Please try again.';
+        errorDiv.classList.remove('hidden');
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+        btn.disabled = false;
+    }
+});
+
+function togglePassword(id) {
+    const inp = document.getElementById(id);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

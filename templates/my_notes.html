@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}My Notes — AI Smart Notes{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    {% include 'partials/sidebar.html' %}
+
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">My Notes</h1>
+                <p class="page-subtitle">All your AI-generated study notes in one place</p>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle" onclick="toggleTheme()"><span class="theme-icon">🌙</span></button>
+                <a href="/generator" class="btn btn-primary btn-sm">+ Generate New</a>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-bar-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" class="search-bar" 
+                   placeholder="Search notes by topic..."
+                   oninput="debounceSearch(this.value)">
+            <button class="search-clear hidden" id="search-clear" onclick="clearSearch()">✕</button>
+        </div>
+
+        <!-- Notes Grid -->
+        <div id="notes-container">
+            <div class="loading-state">Loading your notes...</div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </main>
+</div>
+
+<!-- Note Detail Modal -->
+<div class="modal-overlay hidden" id="note-modal" onclick="closeModal(event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modal-topic"></h2>
+            <div class="modal-actions">
+                <button class="btn btn-ghost btn-sm" onclick="downloadModalPDF()" id="modal-pdf-btn">📄 PDF</button>
+                <button class="btn btn-ghost btn-sm" onclick="deleteNote()" id="modal-delete-btn">🗑 Delete</button>
+                <button class="modal-close" onclick="closeModalDirect()">✕</button>
+            </div>
+        </div>
+        <div class="modal-tabs">
+            <button class="tab active" onclick="switchModalTab('notes', this)">📚 Notes</button>
+            <button class="tab" onclick="switchModalTab('summary', this)">📋 Summary</button>
+            <button class="tab" onclick="switchModalTab('keypoints', this)">⚡ Key Points</button>
+        </div>
+        <div class="modal-body">
+            <div id="modal-tab-notes" class="tab-content active markdown-content"></div>
+            <div id="modal-tab-summary" class="tab-content hidden summary-card">
+                <div id="modal-summary-body"></div>
+            </div>
+            <div id="modal-tab-keypoints" class="tab-content hidden">
+                <div class="keypoints-grid" id="modal-keypoints-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let currentSearch = '';
+let modalNoteId = null;
+let searchTimeout = null;
+
+async function loadNotes(page=1, search='') {
+    currentPage = page;
+    currentSearch = search;
+    const container = document.getElementById('notes-container');
+    container.innerHTML = '<div class="loading-state">Loading notes...</div>';
+
+    try {
+        const res = await fetch(`/api/notes?page=${page}&search=${encodeURIComponent(search)}`);
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        if (data.notes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">${search ? '🔍' : '📝'}</div>
+                    <h3>${search ? 'No notes found' : 'No notes yet'}</h3>
+                    <p>${search ? `No results for "${escapeHtml(search)}"` : 'Generate your first AI-powered notes!'}</p>
+                    ${!search ? '<a href="/generator" class="btn btn-primary btn-sm">Generate Notes</a>' : ''}
+                </div>`;
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = `<div class="notes-grid">${data.notes.map(n => noteCard(n)).join('')}</div>`;
+        renderPagination(data.pages, page);
+
+    } catch (e) {
+        container.innerHTML = '<div class="error-state">Failed to load notes. Please refresh.</div>';
+    }
+}
+
+function noteCard(n) {
+    const preview = n.summary_content.substring(0, 100) + '...';
+    return `
+    <div class="note-card" onclick="openNote(${n.id})">
+        <div class="note-card-header">
+            <div class="note-card-icon">📄</div>
+            ${n.is_favorite ? '<span class="note-fav">⭐</span>' : ''}
+        </div>
+        <h3 class="note-card-topic">${escapeHtml(n.topic)}</h3>
+        <p class="note-card-preview">${escapeHtml(preview)}</p>
+        <div class="note-card-footer">
+            <span class="note-card-date">${n.created_at}</span>
+            <span class="note-card-action">View →</span>
+        </div>
+    </div>`;
+}
+
+function renderPagination(total, current) {
+    const pag = document.getElementById('pagination');
+    if (total <= 1) { pag.innerHTML = ''; return; }
+    let html = '';
+    if (current > 1) html += `<button class="pag-btn" onclick="loadNotes(${current-1}, '${currentSearch}')">← Prev</button>`;
+    for (let i = 1; i <= total; i++) {
+        html += `<button class="pag-btn ${i===current?'active':''}" onclick="loadNotes(${i}, '${currentSearch}')">${i}</button>`;
+    }
+    if (current < total) html += `<button class="pag-btn" onclick="loadNotes(${current+1}, '${currentSearch}')">Next →</button>`;
+    pag.innerHTML = html;
+}
+
+async function openNote(id) {
+    modalNoteId = id;
+    document.getElementById('note-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('modal-tab-notes').innerHTML = '<div class="loading-state">Loading...</div>';
+
+    const res = await fetch(`/api/notes/${id}`);
+    const note = await res.json();
+
+    document.getElementById('modal-topic').textContent = note.topic;
+    document.getElementById('modal-tab-notes').innerHTML = parseMarkdown(note.notes_content);
+    document.getElementById('modal-summary-body').textContent = note.summary_content;
+
+    if (note.key_points) {
+        try {
+            const points = JSON.parse(note.key_points);
+            document.getElementById('modal-keypoints-grid').innerHTML = points.map((p, i) => `
+                <div class="kp-card">
+                    <div class="kp-number">${String(i+1).padStart(2,'0')}</div>
+                    <div class="kp-text">${escapeHtml(p)}</div>
+                </div>`).join('');
+        } catch(e) {}
+    }
+}
+
+function closeModal(event) {
+    if (event.target.id === 'note-modal') closeModalDirect();
+}
+
+function closeModalDirect() {
+    document.getElementById('note-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+    // Reset tabs
+    document.querySelectorAll('.modal-tabs .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.modal-tabs .tab')[0].classList.add('active');
+    document.querySelectorAll('#note-modal .tab-content').forEach(t => { t.classList.add('hidden'); t.classList.remove('active'); });
+    document.getElementById('modal-tab-notes').classList.remove('hidden');
+    document.getElementById('modal-tab-notes').classList.add('active');
+}
+
+function switchModalTab(tab, el) {
+    document.querySelectorAll('.modal-tabs .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#note-modal .tab-content').forEach(t => { t.classList.remove('active'); t.classList.add('hidden'); });
+    el.classList.add('active');
+    const content = document.getElementById(`modal-tab-${tab}`);
+    content.classList.remove('hidden');
+    content.classList.add('active');
+}
+
+async function downloadModalPDF() {
+    if (!modalNoteId) return;
+    const btn = document.getElementById('modal-pdf-btn');
+    btn.textContent = '⏳...';
+    btn.disabled = true;
+    const res = await fetch(`/api/notes/${modalNoteId}/pdf`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'note.pdf'; a.click();
+    URL.revokeObjectURL(url);
+    btn.textContent = '📄 PDF'; btn.disabled = false;
+}
+
+async function deleteNote() {
+    if (!modalNoteId || !confirm('Delete this note permanently?')) return;
+    await fetch(`/api/notes/${modalNoteId}`, { method: 'DELETE' });
+    closeModalDirect();
+    loadNotes(currentPage, currentSearch);
+}
+
+function debounceSearch(val) {
+    clearTimeout(searchTimeout);
+    document.getElementById('search-clear').classList.toggle('hidden', !val);
+    searchTimeout = setTimeout(() => loadNotes(1, val), 400);
+}
+
+function clearSearch() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').classList.add('hidden');
+    loadNotes(1, '');
+}
+
+function parseMarkdown(text) {
+    return text
+        .replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>')
+        .replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^- (.+)$/gm, '<li class="md-li">$1</li>')
+        .replace(/(<li.*<\/li>\n?)+/g, '<ul class="md-ul">$&</ul>')
+        .replace(/\n\n/g, '</p><p class="md-p">')
+        .replace(/^(?!<[hul])(.+)$/gm, '<p class="md-p">$1</p>');
+}
+
+loadNotes();
+</script>
+{% endblock %}
